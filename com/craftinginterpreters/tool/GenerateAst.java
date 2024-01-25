@@ -52,7 +52,6 @@ public class GenerateAst {
     // function to generate the visitor interface
     private static void defineVisitor(PrintWriter writer, String baseName, List<String> types){
         writer.println("    interface Visitor<R> {");
-
         for (String type: types){
             String typeName = type.split(":")[0].trim();
             writer.println("       R visit" + typeName + baseName + "(" + typeName + " " + baseName.toLowerCase() + ");");

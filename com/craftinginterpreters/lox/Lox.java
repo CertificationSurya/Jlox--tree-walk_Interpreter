@@ -49,15 +49,21 @@ public class Lox {
         }
     }
 
-    // for scanner.
+    // for scanner and parser.
     private static void run(String source) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
+        Parser parser = new Parser(tokens);
+        Expr expression = parser.parse();
 
-        // perform scanner wise operation
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
+        // stop if there was a syntax error
+        if (hadError) return;
+        System.out.println(new AstPrinter().print(expression));
+
+        // // perform scanner wise operation
+        // for (Token token : tokens) {
+        //     System.out.println(token);
+        // }
     }
 
     // Error Handling
@@ -68,6 +74,16 @@ public class Lox {
     private static void report(int line, String where, String message) {
         System.err.println("[line " + line + "] Error" + where + ": " + message);
         hadError = true;
+    }
+
+    // show error
+    static void error(Token token, String message){
+        if (token.type == TokenType.EOF){
+            report(token.line, " at end", message);
+        }
+        else {
+            report(token.line, token.lexeme+"'", message);
+        }
     }
 
 }
