@@ -1,27 +1,30 @@
 package com.craftinginterpreters.lox;
 
+import static com.craftinginterpreters.lox.TokenType.BANG_EQUAL;
+
 class Interpreter implements Expr.Visitor<Object> {
 
-    void interpret(Expr expression){
-        try{
+    void interpret(Expr expression) {
+        try {
             Object value = evaluate(expression);
             System.out.println(stringify(value));
-        }
-        catch(RuntimeError error){
+        } catch (RuntimeError error) {
             Lox.runtimeError(error);
         }
     }
-    private String stringify(Object object){
-        if (object == null) return "nil";
 
-        if (object instanceof Double){
+    private String stringify(Object object) {
+        if (object == null)
+            return "nil";
+
+        if (object instanceof Double) {
             String text = object.toString();
-            if (text.endsWith(".0")){
-                text = text.substring(0, text.length()-2);
+            if (text.endsWith(".0")) {
+                text = text.substring(0, text.length() - 2);
             }
             return text;
         }
-        
+
         return object.toString();
     }
 
@@ -48,15 +51,18 @@ class Interpreter implements Expr.Visitor<Object> {
         // Unreachable
         return null;
     }
+
     // for unary
-    private void checkNumberOperand(Token operator, Object operand){
-        if (operand instanceof Double) return;
+    private void checkNumberOperand(Token operator, Object operand) {
+        if (operand instanceof Double)
+            return;
         throw new RuntimeError(operator, "Operand must be a number");
     }
-    
+
     // for binary
-    private void checkNumberOperand(Token operator, Object left, Object right){
-        if (left instanceof Double && right instanceof Double) return;
+    private void checkNumberOperand(Token operator, Object left, Object right) {
+        if (left instanceof Double && right instanceof Double)
+            return;
         throw new RuntimeError(operator, "Operand must be numbers.");
     }
 
@@ -67,10 +73,12 @@ class Interpreter implements Expr.Visitor<Object> {
             return (boolean) object;
         return true;
     }
-    
-    private boolean isEqual(Object a, Object b){
-        if (a==null && b == null) return true;
-        if (a==null) return false;
+
+    private boolean isEqual(Object a, Object b) {
+        if (a == null && b == null)
+            return true;
+        if (a == null)
+            return false;
         return a.equals(b);
     }
 
@@ -91,47 +99,143 @@ class Interpreter implements Expr.Visitor<Object> {
         Object right = evaluate(expr.right);
 
         switch (expr.operator.type) {
-        // Equality operator
-            case BANG_EQUAL: return !isEqual(left, right);
-            case EQUAL_EQUAL: return isEqual(left, right);
+            // Equality operator
+            case BANG_EQUAL:
+                if (performDifferentTypeRelation(left, right)) {
+                    return !isEqual(left, right);
+                }
+                return performDifferentTypeOperation(expr.operator.type, left, right);
 
-        // relational/comparison
+            case EQUAL_EQUAL:
+                if (performDifferentTypeRelation(left, right))
+                    return isEqual(left, right);
+                return performDifferentTypeOperation(expr.operator.type, left, right);
+
+            // relational/comparison
             case GREATER:
-                checkNumberOperand(expr.operator, left, right);
-                return (double) left > (double) right;
+                if (performDifferentTypeRelation(left, right)) {
+                    checkNumberOperand(expr.operator, left, right);
+                    return (double) left > (double) right;
+                }
+                return performDifferentTypeOperation(expr.operator.type, left, right);
+
             case GREATER_EQUAL:
-                checkNumberOperand(expr.operator, left, right);
-                return (double) left >= (double) right;
+                if (performDifferentTypeRelation(left, right)) {
+                    checkNumberOperand(expr.operator, left, right);
+                    return (double) left >= (double) right;
+                }
+                return performDifferentTypeOperation(expr.operator.type, left, right);
+
             case LESS:
-                checkNumberOperand(expr.operator, left, right);
-                return (double) left < (double) right;
+                if (performDifferentTypeRelation(left, right)) {
+                    checkNumberOperand(expr.operator, left, right);
+                    return (double) left < (double) right;
+                }
+                return performDifferentTypeOperation(expr.operator.type, left, right);
+
             case LESS_EQUAL:
-                checkNumberOperand(expr.operator, left, right);
-                return (double) left <= (double) right;
-                
-                // arithmetic
+                if (performDifferentTypeRelation(left, right)) {
+                    checkNumberOperand(expr.operator, left, right);
+                    return (double) left <= (double) right;
+                }
+                return performDifferentTypeOperation(expr.operator.type, left, right);
+
+            // arithmetic
             case MINUS:
                 checkNumberOperand(expr.operator, left, right);
                 return (double) left - (double) right;
-                
+
             // if num, add. if string, concatenate
             case PLUS:
                 if (left instanceof Double && right instanceof Double)
                     return (double) left + (double) right;
                 if (left instanceof String && right instanceof String)
                     return (String) left + (String) right;
+
+                // for Double and String value, concatenate
+                if ((left instanceof String && right instanceof Double))
+                    return (String) left + loseDotZero(String.valueOf(right));
+                if ((left instanceof Double && right instanceof String))
+                    return loseDotZero(String.valueOf(left)) + (String) right;
+
                 throw new RuntimeError(expr.operator, "Operands must be two numbers or two strings.");
 
             case SLASH:
                 checkNumberOperand(expr.operator, left, right);
-                return (double) left / (double) right;
+                if ((double)right == 0){
+                    throw new RuntimeError(expr.operator, "The Divisor Cannot be 0");
+                }
+                else return (double) left / (double) right;
+                
             case STAR:
                 checkNumberOperand(expr.operator, left, right);
                 return (double) left * (double) right;
         }
 
-
-
         return null;
+    }
+
+    // ## My Contribution ##
+    // To lose .0 when concatinate
+    private String loseDotZero(String number) {
+        if (number.endsWith(".0"))
+            return number.substring(0, number.length() - 2);
+        return number;
+    }
+
+    // To perform Relational Operations between String and Number [==, !=, >, >=, <,
+    // <=]
+    private boolean performDifferentTypeRelation(Object left, Object right) {
+        return (left instanceof String && right instanceof String)
+                || (left instanceof Double && right instanceof Double);
+    }
+
+    // calls operate function to perform relation operation if different types, else
+    // returns false
+    private boolean performDifferentTypeOperation(TokenType operator, Object left, Object right) {
+        if (left instanceof String && right instanceof Double) {
+            return operate(operator, (String) left, (Double) right, true);
+        } else if (left instanceof Double && right instanceof String) {
+            return operate(operator, (String) right, (Double) left, false);
+        }
+        return false;
+    }
+
+    private boolean operate(TokenType operator, String strVal, Double doubleVal, boolean precedence) {
+        int sum = 0;
+        for (int i = 0; i < strVal.length(); i++) {
+            char currentChar = strVal.charAt(i);
+            int asciiValue = (int) currentChar;
+            sum += asciiValue;
+        }
+        switch (operator) {
+            case BANG_EQUAL:
+                return doubleVal != sum;
+
+            case EQUAL_EQUAL:
+                return doubleVal == sum;
+
+            case GREATER:
+                if (precedence)
+                    return sum > doubleVal;
+                return doubleVal > sum;
+
+            case GREATER_EQUAL:
+                if (precedence)
+                    return sum >= doubleVal;
+                return doubleVal >= sum;
+
+            case LESS:
+                if (precedence)
+                    return sum < doubleVal;
+                return doubleVal < sum;
+
+            case LESS_EQUAL:
+                if (precedence)
+                    return sum <= doubleVal;
+                return doubleVal <= sum;
+            default:
+                return false;
+        }
     }
 }
