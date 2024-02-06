@@ -4,6 +4,7 @@ import java.util.List;
 // import static com.craftinginterpreters.lox.TokenType.BANG_EQUAL;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+    private Environment environment = new Environment();
 
     void interpret(List<Stmt> statements) {
         try {
@@ -53,6 +54,12 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         // Unreachable
         return null;
     }
+    // variable expression forwarding to environment to make sure the variable is defined
+    @Override
+    public Object visitVariableExpr(Expr.Variable expr){
+        return environment.get(expr.name);
+    }
+
 
     // for unary
     private void checkNumberOperand(Token operator, Object operand) {
@@ -99,6 +106,30 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         stmt.accept(this);
     }
 
+    // execute block statements
+    void executeBlock(List<Stmt> statements, Environment environment){
+        Environment previous = this.environment;
+        try{
+            // new environment
+            this.environment = environment;
+
+            for (Stmt statement: statements){
+                execute(statement);
+            }
+        } 
+        // restore the previous environment
+        finally {
+            this.environment = previous;
+        }
+    }
+
+    // for block statement
+    @Override
+    public Void visitBlockStmt(Stmt.Block stmt){
+        executeBlock(stmt.statements, new Environment(environment));
+        return null;
+    }
+
     // for expression statement
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt){
@@ -111,6 +142,25 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
         return null;
+    }
+
+    // for declaration statement
+    @Override
+    public Void visitVarStmt(Stmt.Var stmt){
+        Object value = null;
+        if (stmt.initializer != null){
+            value = evaluate(stmt.initializer);
+        }
+        environment.define(stmt.name.lexeme, value);
+        return null;
+    }
+
+    // for assignment statement
+    @Override
+    public Object visitAssignExpr(Expr.Assign expr){
+        Object value = evaluate(expr.value);
+        environment.assign(expr.name, value);
+        return value;
     }
 
     // evaluating binary operator

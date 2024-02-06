@@ -28,7 +28,7 @@ class Parser {
 
     // expanding expression to equality rule
     private Expr expression() {
-        return equality();
+        return assignment();
     }
 
     // declaration statement
@@ -47,6 +47,8 @@ class Parser {
     private Stmt statement() {
         if (match(PRINT))
             return printStatement();
+        // for block scope stating
+        if (match(LEFT_BRACE)) return new Stmt.Block(block());
         return expressionStatement();
     }
 
@@ -74,6 +76,35 @@ class Parser {
         Expr expr = expression();
         consume(SEMICOLON, "Expected ';' after value.");
         return new Stmt.Expression(expr);
+    }
+
+    // block scope check and functionality
+    private List<Stmt> block(){
+        List<Stmt> statements = new ArrayList<>();
+
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+        
+        consume(RIGHT_BRACE, "Expect '}' after block.");
+        return statements;
+    }
+
+    // assignment method to confirm if it's equality or assignment of value
+    private Expr assignment(){
+        Expr expr = equality();
+
+        if (match(EQUAL)){
+            Token equals = previous();
+            Expr value = assignment();
+
+            if (expr instanceof Expr.Variable){
+                Token name = ((Expr.Variable) expr).name;
+                return new Expr.Assign(name, value);
+            }
+            error(equals, "Invalid assignment target");
+        }
+        return expr;
     }
 
     // rules for equality
