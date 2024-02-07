@@ -133,7 +133,9 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     // for expression statement
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt){
-        evaluate(stmt.expression);
+        Object value = evaluate(stmt.expression);
+        // Print out expression in REPL [challenge]
+        System.out.println(stringify(value));  
         return null;
     }
     // for print statement's visit method
