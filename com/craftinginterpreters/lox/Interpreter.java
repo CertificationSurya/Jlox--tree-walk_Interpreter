@@ -3,6 +3,8 @@ package com.craftinginterpreters.lox;
 import java.util.List;
 // import static com.craftinginterpreters.lox.TokenType.BANG_EQUAL;
 
+import com.craftinginterpreters.lox.Expr.Assign;
+
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     private Environment environment = new Environment();
 
@@ -35,6 +37,22 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
         return expr.value;
+    }
+
+    // evaluating logical expression
+    @Override
+    public Object visitLogicalExpr (Expr.Logical expr){
+        Object left = evaluate(expr.left);
+
+        if (expr.operator.type == TokenType.OR){
+            if (isTruthy(left))
+                return left;
+        }
+        else{
+            if (!isTruthy(left))
+                return left;
+        }
+        return evaluate(expr.right);
     }
 
     // evaluating unary expression
@@ -135,9 +153,23 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     public Void visitExpressionStmt(Stmt.Expression stmt){
         Object value = evaluate(stmt.expression);
         // Print out expression in REPL [challenge]
-        System.out.println(stringify(value));  
+        if (stmt.display){
+            System.out.println(stringify(value));
+        }
         return null;
     }
+    // for if-else
+    @Override
+    public Void visitIfStmt(Stmt.If stmt){
+        if (isTruthy(evaluate(stmt.condition))){
+            execute(stmt.thenBranch);
+        }
+        else if (stmt.elseBranch != null){
+            execute(stmt.elseBranch);
+        }
+        return null;
+    }
+
     // for print statement's visit method
     @Override
     public Void visitPrintStmt(Stmt.Print stmt){
@@ -154,6 +186,15 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             value = evaluate(stmt.initializer);
         }
         environment.define(stmt.name.lexeme, value);
+        return null;
+    }
+
+    // for while loop execution
+    @Override
+    public Void visitWhileStmt(Stmt.While stmt){
+        while(isTruthy(evaluate(stmt.condition))){
+            execute(stmt.body);
+        }
         return null;
     }
 

@@ -1,58 +1,60 @@
-package com.craftinginterpreters.lox;
+// # We used this file during parsing. we won't need it in our Interpreting.
 
-// this class uses to make expression in string showing precedence/hierarchy
-//  (* (-123) (group 45.67))
+// package com.craftinginterpreters.lox;
 
-class AstPrinter implements Expr.Visitor<String> {
-    String print(Expr expr) {
-        return expr.accept(this);
-    }
+// // this class uses to make expression in string showing precedence/hierarchy
+// //  (* (-123) (group 45.67))
 
-    @Override
-    public String visitBinaryExpr(Expr.Binary expr) {
-        return parenthesize(expr.operator.lexeme, expr.left, expr.right);
-    }
+// class AstPrinter implements Expr.Visitor<String> {
+//     String print(Expr expr) {
+//         return expr.accept(this);
+//     }
 
-    @Override
-    public String visitGroupingExpr(Expr.Grouping expr) {
-        return parenthesize("group", expr.expression);
-    }
+//     @Override
+//     public String visitBinaryExpr(Expr.Binary expr) {
+//         return parenthesize(expr.operator.lexeme, expr.left, expr.right);
+//     }
 
-    @Override
-    public String visitLiteralExpr(Expr.Literal expr) {
-        if (expr.value == null)
-            return "nil";
-        return expr.value.toString();
-    }
+//     @Override
+//     public String visitGroupingExpr(Expr.Grouping expr) {
+//         return parenthesize("group", expr.expression);
+//     }
 
-    @Override
-    public String visitUnaryExpr(Expr.Unary expr) {
-        return parenthesize(expr.operator.lexeme, expr.right);
-    }
+//     @Override
+//     public String visitLiteralExpr(Expr.Literal expr) {
+//         if (expr.value == null)
+//             return "nil";
+//         return expr.value.toString();
+//     }
 
-    // parenthesized function
-    private String parenthesize(String name, Expr... exprs) {
-        StringBuilder builder = new StringBuilder();
+//     @Override
+//     public String visitUnaryExpr(Expr.Unary expr) {
+//         return parenthesize(expr.operator.lexeme, expr.right);
+//     }
 
-        builder.append("(").append(name);
-        for (Expr expr : exprs) {
-            builder.append(" ");
-            builder.append(expr.accept(this));
-        }
-        builder.append(")");
+//     // parenthesized function
+//     private String parenthesize(String name, Expr... exprs) {
+//         StringBuilder builder = new StringBuilder();
 
-        return builder.toString();
-    }
+//         builder.append("(").append(name);
+//         for (Expr expr : exprs) {
+//             builder.append(" ");
+//             builder.append(expr.accept(this));
+//         }
+//         builder.append(")");
 
-    // testing purpose to check if the implementation works or not
-    public static void main(String[] args) {
-        Expr expression = new Expr.Binary(
-                new Expr.Unary(new Token(TokenType.MINUS, "-", null, 1),
-                new Expr.Literal(123)),new Token(TokenType.STAR, "*", null, 1),
-                new Expr.Grouping(new Expr.Literal(45.67)));
+//         return builder.toString();
+//     }
 
-        System.out.println(new AstPrinter().print(expression));
-    }
+//     // testing purpose to check if the implementation works or not
+//     public static void main(String[] args) {
+//         Expr expression = new Expr.Binary(
+//                 new Expr.Unary(new Token(TokenType.MINUS, "-", null, 1),
+//                 new Expr.Literal(123)),new Token(TokenType.STAR, "*", null, 1),
+//                 new Expr.Grouping(new Expr.Literal(45.67)));
+
+//         System.out.println(new AstPrinter().print(expression));
+//     }
 
 
-}
+// }
