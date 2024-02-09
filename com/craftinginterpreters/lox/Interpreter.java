@@ -4,7 +4,7 @@ import java.io.Console;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-// import static com.craftinginterpreters.lox.TokenType.BANG_EQUAL;
+import java.util.regex.Pattern;
 
 import com.craftinginterpreters.lox.Expr.Assign;
 
@@ -30,6 +30,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 return "<native fn>";
             }
         });
+
+        // My Contribution for user input
         globals.define("getData", new LoxCallable() {
             @Override
             public int arity() {
@@ -40,7 +42,15 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             public Object call(Interpreter interpreter, List<Object> arguments) {
                 Console console = System.console();
                 String text = console.readLine();
-                return text;
+
+                Pattern pattern = Pattern.compile("[^0-9.]"); // !0-9 and .
+                if (pattern.matcher(text).find()) { // if input text found any that's not 0-9 and . then return as
+                                                    // String
+                    return text;
+                }
+                // else return as Double;
+                else
+                    return Double.parseDouble(loseDotZero(text));
             }
 
             @Override
@@ -204,7 +214,9 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     // for function blocks
     @Override
     public Void visitFunctionStmt(Stmt.Function stmt) {
-        LoxFunction function = new LoxFunction(stmt);
+        // here environment is the active environment when the function is declared not
+        // when it's called
+        LoxFunction function = new LoxFunction(stmt, environment);
         environment.define(stmt.name.lexeme, function);
         return null;
     }
@@ -251,6 +263,15 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
         return null;
+    }
+
+    // for returning the function
+    @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+        Object value = null;
+        if (stmt.value != null)
+            value = evaluate(stmt.value);
+        throw new Return(value);
     }
 
     // for declaration statement

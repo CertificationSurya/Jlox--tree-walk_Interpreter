@@ -57,6 +57,8 @@ class Parser {
             return ifStatement();
         if (match(PRINT))
             return printStatement();
+        if (match(RETURN))
+            return returnStatement();
         if (match(WHILE))
             return whileStatement();
         // for block scope stating
@@ -140,6 +142,17 @@ class Parser {
         Expr value = expression();
         consume(SEMICOLON, "Expected ';' after value.");
         return new Stmt.Print(value);
+    }
+
+    // for return keyword
+    private Stmt returnStatement(){
+        Token keyword = previous();
+        Expr value = null;
+        if (!check(SEMICOLON)){
+            value = expression();
+        }
+        consume(SEMICOLON, "Expect ';' after return value.");
+        return new Stmt.Return(keyword, value);
     }
 
     // variable declaration statement
