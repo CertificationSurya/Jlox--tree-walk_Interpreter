@@ -1,16 +1,58 @@
 package com.craftinginterpreters.lox;
 
+import java.io.Console;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 // import static com.craftinginterpreters.lox.TokenType.BANG_EQUAL;
 
 import com.craftinginterpreters.lox.Expr.Assign;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
-    private Environment environment = new Environment();
+    final Environment globals = new Environment();
+    private Environment environment = globals;
+
+    // stuffing native function in the global scope
+    Interpreter() {
+        globals.define("clock", new LoxCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public Object call(Interpreter interpreter, List<Object> arguments) {
+                return (double) System.currentTimeMillis() / 1000.0;
+            }
+
+            @Override
+            public String toString() {
+                return "<native fn>";
+            }
+        });
+        globals.define("getData", new LoxCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public Object call(Interpreter interpreter, List<Object> arguments) {
+                Console console = System.console();
+                String text = console.readLine();
+                return text;
+            }
+
+            @Override
+            public String toString() {
+                return "<native fn>";
+            }
+        });
+    }
 
     void interpret(List<Stmt> statements) {
         try {
-            for (Stmt statement: statements){
+            for (Stmt statement : statements) {
                 execute(statement);
             }
         } catch (RuntimeError error) {
@@ -41,14 +83,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     // evaluating logical expression
     @Override
-    public Object visitLogicalExpr (Expr.Logical expr){
+    public Object visitLogicalExpr(Expr.Logical expr) {
         Object left = evaluate(expr.left);
 
-        if (expr.operator.type == TokenType.OR){
+        if (expr.operator.type == TokenType.OR) {
             if (isTruthy(left))
                 return left;
-        }
-        else{
+        } else {
             if (!isTruthy(left))
                 return left;
         }
@@ -72,12 +113,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         // Unreachable
         return null;
     }
-    // variable expression forwarding to environment to make sure the variable is defined
+
+    // variable expression forwarding to environment to make sure the variable is
+    // defined
     @Override
-    public Object visitVariableExpr(Expr.Variable expr){
+    public Object visitVariableExpr(Expr.Variable expr) {
         return environment.get(expr.name);
     }
-
 
     // for unary
     private void checkNumberOperand(Token operator, Object operand) {
@@ -120,21 +162,21 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     // execute statement
-    private void execute (Stmt stmt){
+    private void execute(Stmt stmt) {
         stmt.accept(this);
     }
 
     // execute block statements
-    void executeBlock(List<Stmt> statements, Environment environment){
+    void executeBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
-        try{
+        try {
             // new environment
             this.environment = environment;
 
-            for (Stmt statement: statements){
+            for (Stmt statement : statements) {
                 execute(statement);
             }
-        } 
+        }
         // restore the previous environment
         finally {
             this.environment = previous;
@@ -143,28 +185,61 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     // for block statement
     @Override
-    public Void visitBlockStmt(Stmt.Block stmt){
+    public Void visitBlockStmt(Stmt.Block stmt) {
         executeBlock(stmt.statements, new Environment(environment));
         return null;
     }
 
     // for expression statement
     @Override
-    public Void visitExpressionStmt(Stmt.Expression stmt){
+    public Void visitExpressionStmt(Stmt.Expression stmt) {
         Object value = evaluate(stmt.expression);
         // Print out expression in REPL [challenge]
-        if (stmt.display){
+        if (stmt.display) {
             System.out.println(stringify(value));
         }
         return null;
     }
+
+    // for function blocks
+    @Override
+    public Void visitFunctionStmt(Stmt.Function stmt) {
+        LoxFunction function = new LoxFunction(stmt);
+        environment.define(stmt.name.lexeme, function);
+        return null;
+    }
+
+    // for function call
+    @Override
+    public Object visitCallExpr(Expr.Call expr) {
+        Object callee = evaluate(expr.callee);
+
+        List<Object> arguments = new ArrayList<>();
+        for (Expr arguement : expr.arguments) {
+            arguments.add(evaluate(arguement));
+        }
+
+        // if not callable callee
+        if (!(callee instanceof LoxCallable)) {
+            throw new RuntimeError(expr.paren, "Can only call functions and classes");
+        }
+
+        LoxCallable function = (LoxCallable) callee;
+
+        // checks if arity (function parameter) matches arguement
+        if (arguments.size() != function.arity()) {
+            throw new RuntimeError(expr.paren,
+                    "Expected " + function.arity() + " arguments but got " + arguments.size() + ".");
+        }
+        return function.call(this, arguments);
+    }
+
     // for if-else
     @Override
-    public Void visitIfStmt(Stmt.If stmt){
-        if (isTruthy(evaluate(stmt.condition))){
+    public Void visitIfStmt(Stmt.If stmt) {
+        if (isTruthy(evaluate(stmt.condition))) {
             execute(stmt.thenBranch);
-        }
-        else if (stmt.elseBranch != null){
+        } else if (stmt.elseBranch != null) {
             execute(stmt.elseBranch);
         }
         return null;
@@ -172,7 +247,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     // for print statement's visit method
     @Override
-    public Void visitPrintStmt(Stmt.Print stmt){
+    public Void visitPrintStmt(Stmt.Print stmt) {
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
         return null;
@@ -180,9 +255,9 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     // for declaration statement
     @Override
-    public Void visitVarStmt(Stmt.Var stmt){
+    public Void visitVarStmt(Stmt.Var stmt) {
         Object value = null;
-        if (stmt.initializer != null){
+        if (stmt.initializer != null) {
             value = evaluate(stmt.initializer);
         }
         environment.define(stmt.name.lexeme, value);
@@ -191,8 +266,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     // for while loop execution
     @Override
-    public Void visitWhileStmt(Stmt.While stmt){
-        while(isTruthy(evaluate(stmt.condition))){
+    public Void visitWhileStmt(Stmt.While stmt) {
+        while (isTruthy(evaluate(stmt.condition))) {
             execute(stmt.body);
         }
         return null;
@@ -200,7 +275,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     // for assignment statement
     @Override
-    public Object visitAssignExpr(Expr.Assign expr){
+    public Object visitAssignExpr(Expr.Assign expr) {
         Object value = evaluate(expr.value);
         environment.assign(expr.name, value);
         return value;
@@ -276,11 +351,11 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
             case SLASH:
                 checkNumberOperand(expr.operator, left, right);
-                if ((double)right == 0){
+                if ((double) right == 0) {
                     throw new RuntimeError(expr.operator, "The Divisor Cannot be 0");
-                }
-                else return (double) left / (double) right;
-                
+                } else
+                    return (double) left / (double) right;
+
             case STAR:
                 checkNumberOperand(expr.operator, left, right);
                 return (double) left * (double) right;
