@@ -115,7 +115,16 @@ class Scanner {
                 } 
                 // My contribution ( multiple line comment (/*...*/) )
                 else if(match('*')) {
-                    while (peek() == '*' && peekNext() != '/') advance();
+                    try{
+                        while (true) {
+                            if (advance()=='*' && advance()=='/'){
+                                break;
+                            }
+                        }
+                    }
+                    catch (StringIndexOutOfBoundsException e) {
+                        System.err.println("> [Error: Multi-line comment wasn't bounded]!");
+                    }
                 }               
                 else {
                     addToken(SLASH);

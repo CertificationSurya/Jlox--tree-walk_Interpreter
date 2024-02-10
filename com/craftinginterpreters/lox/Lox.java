@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -30,8 +31,19 @@ public class Lox {
 
     // for running from command line when file path is given;
     private static void runFile(String path) throws IOException {
-        byte[] bytes = Files.readAllBytes(Paths.get(path));
-        run(new String(bytes, Charset.defaultCharset()));
+        try{
+            if(!path.endsWith(".jlox")){
+                throw new IOException("Error file format provided!");
+            }
+            byte[] bytes = Files.readAllBytes(Paths.get(path));
+            run(new String(bytes, Charset.defaultCharset()), false);
+        }
+        catch (NoSuchFileException err) {
+            System.err.println("The given path: '" + path + "' was incorrect");
+        }
+        catch (IOException err) {
+            System.err.println(err.getMessage());
+        }
 
         // Indicate an error in the exit code
         if (hadError)
@@ -50,27 +62,28 @@ public class Lox {
             String line = reader.readLine();
             if (line == null)
                 break;
-            run(line);
+            run(line, true);
             hadError = false; // added to not kill entire session.
         }
     }
 
     // for scanner and parser.
-    private static void run(String source) {
+    private static void run(String source, boolean isPrompt) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
         Parser parser = new Parser(tokens);
         List<Stmt> statements = parser.parse();
 
         // stop if there was a syntax error
-        if (hadError) return;
+        if (hadError)
+            return;
         // System.out.println(new AstPrinter().print(expression));
 
-        interpreter.interpret(statements);
+        interpreter.interpret(statements, isPrompt);
 
         // // perform scanner wise operation
         // for (Token token : tokens) {
-        //     System.out.println(token);
+        // System.out.println(token);
         // }
     }
 
@@ -85,17 +98,16 @@ public class Lox {
     }
 
     // show error
-    static void error(Token token, String message){
-        if (token.type == TokenType.EOF){
+    static void error(Token token, String message) {
+        if (token.type == TokenType.EOF) {
             report(token.line, " at end", message);
-        }
-        else {
-            report(token.line, token.lexeme+"'", message);
+        } else {
+            report(token.line, token.lexeme + "'", message);
         }
     }
 
     // show runtime error
-    static void runtimeError(RuntimeError error){
+    static void runtimeError(RuntimeError error) {
         System.err.println(error.getMessage() + "\n[line " + error.token.line + "]");
         hadRuntimeError = true;
     }

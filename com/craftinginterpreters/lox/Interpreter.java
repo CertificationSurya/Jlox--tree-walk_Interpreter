@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import com.craftinginterpreters.lox.Expr.Assign;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+    private boolean isPrompt = false;
     final Environment globals = new Environment();
     private Environment environment = globals;
 
@@ -60,7 +61,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         });
     }
 
-    void interpret(List<Stmt> statements) {
+    void interpret(List<Stmt> statements, boolean prompt) {
+        if(prompt) isPrompt = prompt;
         try {
             for (Stmt statement : statements) {
                 execute(statement);
@@ -205,7 +207,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         Object value = evaluate(stmt.expression);
         // Print out expression in REPL [challenge]
-        if (stmt.display) {
+        if (stmt.display && isPrompt) {
             System.out.println(stringify(value));
         }
         return null;

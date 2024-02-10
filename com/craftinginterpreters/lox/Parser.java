@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.craftinginterpreters.lox.Expr.Assign;
+import com.craftinginterpreters.lox.Expr.Call;
 
 import static com.craftinginterpreters.lox.TokenType.*;
 
@@ -180,7 +181,7 @@ class Parser {
     // other statement method
     private Stmt expressionStatement() {
         Expr expr = expression();
-        boolean display = !(expr instanceof Assign);
+        boolean display = !(expr instanceof Assign || expr instanceof Call);
         consume(SEMICOLON, "Expected ';' after value.");
         return new Stmt.Expression(expr, display);
     }
