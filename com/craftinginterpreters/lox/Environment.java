@@ -46,4 +46,24 @@ class Environment {
     void define(String name, Object value) {
         values.put(name, value);
     }
+
+    // walks a fixed number of hops up the parent chain and return the environment there.
+    Environment ancestor(int distance) {
+        Environment environment = this;
+        for (int i=0; i<distance; i++){
+            environment = environment.enclosing;
+        }
+
+        return environment;
+    }
+
+    // get local variable at given stack level
+    Object getAt (int distance, String name) {
+        return ancestor(distance).values.get(name);  // return value of variable from environment
+    }
+
+    // assign local variable at given stack level
+    void assignAt (int distance, Token name, Object value) {
+        ancestor(distance).values.put(name.lexeme, value);  // return value of variable from environment
+    }
 }

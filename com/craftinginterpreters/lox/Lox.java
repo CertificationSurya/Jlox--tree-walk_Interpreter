@@ -79,6 +79,13 @@ public class Lox {
             return;
         // System.out.println(new AstPrinter().print(expression));
 
+        // Running a resolver
+        Resolver resolver = new Resolver(interpreter);
+        resolver.resolve(statements);
+
+        // stop if there was a resolution error.
+        if (hadError) return;
+
         interpreter.interpret(statements, isPrompt);
 
         // // perform scanner wise operation

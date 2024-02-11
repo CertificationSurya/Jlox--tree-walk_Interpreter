@@ -2,16 +2,18 @@ package com.craftinginterpreters.lox;
 
 import java.io.Console;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import com.craftinginterpreters.lox.Expr.Assign;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     private boolean isPrompt = false;
     final Environment globals = new Environment();
     private Environment environment = globals;
+    private final Map<Expr, Integer> locals = new HashMap<>();
 
     // stuffing native function in the global scope
     Interpreter() {
@@ -130,7 +132,18 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     // defined
     @Override
     public Object visitVariableExpr(Expr.Variable expr) {
-        return environment.get(expr.name);
+        return lookUpVariable(expr.name, expr);
+    }
+
+    // accessing resolved variable
+    private Object lookUpVariable(Token name, Expr expr){
+        Integer distance = locals.get(expr);
+        if (distance != null){
+            return environment.getAt(distance, name.lexeme);
+        }
+        else {
+            return globals.get(name);
+        }
     }
 
     // for unary
@@ -176,6 +189,11 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     // execute statement
     private void execute(Stmt stmt) {
         stmt.accept(this);
+    }
+
+    // Resolver hands the number (depth between variable found scope and current scope)
+    void resolve (Expr expr, int depth){
+        locals.put(expr, depth);
     }
 
     // execute block statements
@@ -300,7 +318,15 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitAssignExpr(Expr.Assign expr) {
         Object value = evaluate(expr.value);
-        environment.assign(expr.name, value);
+
+        Integer distance = locals.get(expr);
+        if (distance != null){
+            environment.assignAt(distance, expr.name, value);
+        }
+        else {
+            globals.assign(expr.name, value);
+        }
+
         return value;
     }
 
