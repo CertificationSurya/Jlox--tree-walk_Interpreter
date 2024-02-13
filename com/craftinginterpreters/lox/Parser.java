@@ -39,6 +39,8 @@ class Parser {
     // declaration statement
     private Stmt declaration() {
         try {
+            if (match(CLASS))
+                return classDeclaration();
             if (match(FUN))
                 return function("function");
             if (match(VAR))
@@ -48,6 +50,21 @@ class Parser {
             synchronize(); // synchronize when parser goes to panic mode [error recovery]
             return null;
         }
+    }
+
+    // classDeclaration
+    private Stmt classDeclaration(){
+        Token name = consume(IDENTIFIER, "Expect class name.");
+        consume(LEFT_BRACE, "Except '{' before class body");
+
+        List<Stmt.Function> methods = new ArrayList<>();
+        while(!check(RIGHT_BRACE) && !isAtEnd()){
+            methods.add(function("method"));
+        }
+
+        consume(RIGHT_BRACE, "Expect '}' after class body.");
+
+        return new Stmt.Class(name, methods);
     }
 
     // parses one of the statements
