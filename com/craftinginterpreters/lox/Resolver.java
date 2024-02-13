@@ -126,6 +126,13 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
         return null;
     }
 
+    // the resolution recurse only expression to the left of the dot
+    @Override
+    public Void visitGetExpr(Expr.Get expr){
+        resolve(expr.object);
+        return null;
+    }
+
     @Override
     public Void visitGroupingExpr(Expr.Grouping expr) {
         resolve(expr.expression);
@@ -141,6 +148,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     public Void visitLogicalExpr(Expr.Logical expr) {
         resolve(expr.left);
         resolve(expr.right);
+        return null;
+    }
+
+    // setter for class
+    @Override
+    public Void visitSetExpr(Expr.Set expr){
+        resolve(expr.value);  // object value being set
+        resolve(expr.object); // object whose property is being set
         return null;
     }
 
