@@ -19,8 +19,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
     private enum FunctionType {
-        NONE, FUNCTION
+        NONE, FUNCTION, INITIALIZER, METHOD
     }
+
+    private enum ClassType {
+        NONE, CLASS
+    }
+
+    private ClassType currentClass = ClassType.NONE;
 
     // For Block statement
     @Override
@@ -33,8 +39,28 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
     @Override
     public Void visitClassStmt(Stmt.Class stmt){
+        ClassType enclosingClass = currentClass;
+        currentClass = ClassType.CLASS;
+
         declare(stmt.name);
         define(stmt.name);
+
+        beginScope();
+        scopes.peek().put("this", true);
+
+        for (Stmt.Function method : stmt.methods){
+            FunctionType declaration = FunctionType.METHOD;
+            if (method.name.lexeme.equals("init")){
+                declaration = FunctionType.INITIALIZER;
+            }
+
+            resolveFunction(method, declaration);
+        }
+
+        endScope();
+
+        currentClass = enclosingClass;
+
         return null;
     }
 
@@ -76,6 +102,10 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
         }
 
         if (stmt.value != null) {
+            if (currentFunction == FunctionType.INITIALIZER){
+                Lox.error(stmt.keyword, "Can't return a value from an initializer.");
+            }
+            
             resolve(stmt.value);
         }
 
@@ -156,6 +186,18 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     public Void visitSetExpr(Expr.Set expr){
         resolve(expr.value);  // object value being set
         resolve(expr.object); // object whose property is being set
+        return null;
+    }
+
+    // this keyword of class
+    @Override
+    public Void visitThisExpr(Expr.This expr){
+        if (currentClass == ClassType.NONE) {
+            Lox.error(expr.keyword, "Can't use 'this' outside of a class");
+            return null;
+        }
+
+        resolveLocal(expr, expr.keyword);
         return null;
     }
 
