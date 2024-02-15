@@ -55,6 +55,13 @@ class Parser {
     // classDeclaration
     private Stmt classDeclaration(){
         Token name = consume(IDENTIFIER, "Expect class name.");
+
+        Expr.Variable superclass = null;
+        if (match(LESS)) {
+            consume(IDENTIFIER, "Expect superclass name");
+            superclass = new Expr.Variable(previous());
+        }
+
         consume(LEFT_BRACE, "Except '{' before class body");
 
         List<Stmt.Function> methods = new ArrayList<>();
@@ -64,7 +71,7 @@ class Parser {
 
         consume(RIGHT_BRACE, "Expect '}' after class body.");
 
-        return new Stmt.Class(name, methods);
+        return new Stmt.Class(name, superclass, methods);
     }
 
     // parses one of the statements
