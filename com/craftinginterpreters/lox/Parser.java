@@ -53,7 +53,7 @@ class Parser {
     }
 
     // classDeclaration
-    private Stmt classDeclaration(){
+    private Stmt classDeclaration() {
         Token name = consume(IDENTIFIER, "Expect class name.");
 
         Expr.Variable superclass = null;
@@ -65,7 +65,7 @@ class Parser {
         consume(LEFT_BRACE, "Except '{' before class body");
 
         List<Stmt.Function> methods = new ArrayList<>();
-        while(!check(RIGHT_BRACE) && !isAtEnd()){
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
             methods.add(function("method"));
         }
 
@@ -130,19 +130,19 @@ class Parser {
          * }
          * }
          */
-        
-         if (increment != null){
+
+        if (increment != null) {
             body = new Stmt.Block(
-                Arrays.asList(body, new Stmt.Expression(increment, false))
-            );
-         }
+                    Arrays.asList(body, new Stmt.Expression(increment, false)));
+        }
 
-         if (condition == null) condition = new Expr.Literal(true);
-         body = new Stmt.While(condition, body);
+        if (condition == null)
+            condition = new Expr.Literal(true);
+        body = new Stmt.While(condition, body);
 
-         if (initializer != null){
+        if (initializer != null) {
             body = new Stmt.Block(Arrays.asList(initializer, body));
-         }
+        }
 
         return body;
     }
@@ -170,10 +170,10 @@ class Parser {
     }
 
     // for return keyword
-    private Stmt returnStatement(){
+    private Stmt returnStatement() {
         Token keyword = previous();
         Expr value = null;
-        if (!check(SEMICOLON)){
+        if (!check(SEMICOLON)) {
             value = expression();
         }
         consume(SEMICOLON, "Expect ';' after return value.");
@@ -211,29 +211,28 @@ class Parser {
     }
 
     // for function statement
-    private Stmt.Function function(String kind){
-        Token name = consume(IDENTIFIER, "Except "+ kind + " name.");
+    private Stmt.Function function(String kind) {
+        Token name = consume(IDENTIFIER, "Except " + kind + " name.");
 
         // Parsing parameter list and pair of parentheses wrapped around it
         consume(LEFT_PAREN, "Except '(' after " + kind + " name.");
         List<Token> parameters = new ArrayList<>();
 
         // if no right paren, meaning if there's an arguments.
-        if(!check(RIGHT_PAREN)){
-            do{
-                if(parameters.size() >=255){
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (parameters.size() >= 255) {
                     error(peek(), "Can't have more than 255 parameters.");
                 }
-                    
+
                 parameters.add(
-                    consume(IDENTIFIER, "Expect parameter name")
-                );
-            } while(match(COMMA));
+                        consume(IDENTIFIER, "Expect parameter name"));
+            } while (match(COMMA));
         }
         consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
         // function body
-        consume(LEFT_BRACE, "Expect '{' before "+ kind + " body.");
+        consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
         List<Stmt> body = block();
         return new Stmt.Function(name, parameters, body);
     }
@@ -261,8 +260,7 @@ class Parser {
             if (expr instanceof Expr.Variable) {
                 Token name = ((Expr.Variable) expr).name;
                 return new Expr.Assign(name, value);
-            }
-            else if (expr instanceof Expr.Get){
+            } else if (expr instanceof Expr.Get) {
                 Expr.Get get = (Expr.Get) expr;
                 return new Expr.Set(get.object, get.name, value);
             }
@@ -358,34 +356,33 @@ class Parser {
     }
 
     // helper function to parse arguments list
-    private Expr finishCall(Expr callee){
+    private Expr finishCall(Expr callee) {
         List<Expr> arguments = new ArrayList<>();
-        if (!check(RIGHT_PAREN)){
-            do{
-                if(arguments.size() >= 255){
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (arguments.size() >= 255) {
                     error(peek(), "Can't have more than 255 arguments.");
                 }
 
                 arguments.add(expression());
-            } while(match(COMMA));
+            } while (match(COMMA));
         }
         Token paren = consume(RIGHT_PAREN, "Expect ')' after arguments.");
         return new Expr.Call(callee, paren, arguments);
     }
 
     // for function call
-    private Expr call(){
+    private Expr call() {
         Expr expr = primary();
 
-        while(true){
-            if(match(LEFT_PAREN)){
+        while (true) {
+            if (match(LEFT_PAREN)) {
                 expr = finishCall(expr);
-            } 
-            else if(match(DOT)){
+            } else if (match(DOT)) {
                 Token name = consume(IDENTIFIER, "Expected property name after '.'.");
                 expr = new Expr.Get(expr, name);
-            } 
-            
+            }
+
             else {
                 break;
             }
@@ -406,10 +403,19 @@ class Parser {
             return new Expr.Literal(previous().literal);
         }
 
+        // for super keywrod
+        if (match(SUPER)){
+            Token keyword = previous();
+            consume(DOT, "Expect '.' after super.");
+            Token method = consume(IDENTIFIER, "Expect superclass method name.");
+            return new Expr.Super(keyword, method);
+        }
+
+
         if (match(THIS)) {
             return new Expr.This(previous());
         }
-        
+
         if (match(IDENTIFIER)) {
             return new Expr.Variable(previous());
         }
