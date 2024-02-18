@@ -6,6 +6,7 @@ abstract class Expr {
     interface Visitor<R> {
        R visitAssignExpr(Assign expr);
        R visitBinaryExpr(Binary expr);
+       R visitTernaryExpr(Ternary expr);
        R visitCallExpr(Call expr);
        R visitGetExpr(Get expr);
        R visitGroupingExpr(Grouping expr);
@@ -46,6 +47,26 @@ abstract class Expr {
     final Expr left;
     final Token operator;
     final Expr right;
+    }
+ static class Ternary extends Expr {
+    Ternary(Expr condition, Token questionMark, Stmt trueCase, Token colon, Stmt falseCase) {
+    this.condition = condition;
+    this.questionMark = questionMark;
+    this.trueCase = trueCase;
+    this.colon = colon;
+    this.falseCase = falseCase;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+     return visitor.visitTernaryExpr(this);
+    }
+
+    final Expr condition;
+    final Token questionMark;
+    final Stmt trueCase;
+    final Token colon;
+    final Stmt falseCase;
     }
  static class Call extends Expr {
     Call(Expr callee, Token paren, List<Expr> arguments) {

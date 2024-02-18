@@ -93,6 +93,12 @@ class Scanner {
             case '*':
                 addToken(STAR);
                 break;
+            case '?':
+                addToken(QUESTION_MARK);
+                break;
+            case ':':
+                addToken(COLON);
+                break;
 
             // operator with possible second character
             case '!':

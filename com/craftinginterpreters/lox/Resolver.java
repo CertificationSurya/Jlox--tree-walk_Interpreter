@@ -160,6 +160,13 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
         resolve(expr.right);
         return null;
     }
+    @Override
+    public Void visitTernaryExpr(Expr.Ternary expr) {
+        resolve(expr.condition);
+        resolve(expr.trueCase);
+        resolve(expr.falseCase);
+        return null;
+    }
 
     @Override
     public Void visitCallExpr(Expr.Call expr) {

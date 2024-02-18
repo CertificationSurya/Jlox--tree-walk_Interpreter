@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.craftinginterpreters.lox.Expr.Assign;
 import com.craftinginterpreters.lox.Expr.Call;
+import com.craftinginterpreters.lox.Expr.Ternary;
 
 import static com.craftinginterpreters.lox.TokenType.*;
 
@@ -17,6 +18,7 @@ class Parser {
 
     private final List<Token> tokens;
     private int current = 0;
+    private boolean ternaryScope = false;
 
     Parser(List<Token> tokens) {
         this.tokens = tokens;
@@ -33,7 +35,7 @@ class Parser {
 
     // expanding expression to equality rule
     private Expr expression() {
-        return assignment();
+        return ternary();
     }
 
     // declaration statement
@@ -205,7 +207,7 @@ class Parser {
     // other statement method
     private Stmt expressionStatement() {
         Expr expr = expression();
-        boolean display = !(expr instanceof Assign || expr instanceof Call);
+        boolean display = !(expr instanceof Assign || expr instanceof Call || expr instanceof Ternary);
         consume(SEMICOLON, "Expected ';' after value.");
         return new Stmt.Expression(expr, display);
     }
@@ -249,6 +251,24 @@ class Parser {
         return statements;
     }
 
+    // expression -> assignment
+    private Expr ternary() {
+        Expr expr = assignment();
+        if (match(QUESTION_MARK)) {
+            ternaryScope = true;
+
+            Token questionMark = previous();
+            Stmt trueCase = statement();
+
+            Token colon = consume(COLON, "Expect ':' in ternary operator.");
+            Stmt falseCase = statement();
+
+            ternaryScope = false;
+            return new Expr.Ternary(expr, questionMark, trueCase, colon, falseCase);
+        }
+        return expr;
+    }
+
     // assignment method to confirm if it's equality or assignment of value
     private Expr assignment() {
         Expr expr = or();
@@ -263,6 +283,9 @@ class Parser {
             } else if (expr instanceof Expr.Get) {
                 Expr.Get get = (Expr.Get) expr;
                 return new Expr.Set(get.object, get.name, value);
+            }
+            else if (expr instanceof Expr.Ternary){
+                System.out.println("null");
             }
             error(equals, "Invalid assignment target");
         }
@@ -404,13 +427,12 @@ class Parser {
         }
 
         // for super keywrod
-        if (match(SUPER)){
+        if (match(SUPER)) {
             Token keyword = previous();
             consume(DOT, "Expect '.' after super.");
             Token method = consume(IDENTIFIER, "Expect superclass method name.");
             return new Expr.Super(keyword, method);
         }
-
 
         if (match(THIS)) {
             return new Expr.This(previous());
@@ -445,6 +467,10 @@ class Parser {
 
     // consume. looks if next token is of expected types.
     private Token consume(TokenType type, String message) {
+        if (ternaryScope && type == SEMICOLON) {
+            return new Token(type, ";", null, current);
+        }
+
         if (check(type))
             return advance();
         throw error(peek(), message);

@@ -17,6 +17,7 @@ public class GenerateAst {
         defineAst(outputDir, "Expr", Arrays.asList(
                 "Assign   : Token name, Expr value",
                 "Binary   : Expr left, Token operator, Expr right",
+                "Ternary  : Expr condition, Token questionMark, Stmt trueCase," + " Token colon, Stmt falseCase",
                 "Call     : Expr callee, Token paren, List<Expr> arguments",
                 "Get      : Expr object, Token name",
                 "Grouping : Expr expression",

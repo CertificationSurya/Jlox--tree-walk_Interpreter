@@ -15,6 +15,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     private Environment environment = globals;
     private final Map<Expr, Integer> locals = new HashMap<>();
 
+    private final String[] builtInFunc= {"Input", "Clock"};
+
     // stuffing native function in the global scope
     Interpreter() {
         globals.define("clock", new LoxCallable() {
@@ -35,7 +37,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         });
 
         // My Contribution for user input
-        globals.define("getData", new LoxCallable() {
+        globals.define("Input", new LoxCallable() {
             @Override
             public int arity() {
                 return 0;
@@ -379,6 +381,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         if (stmt.initializer != null) {
             value = evaluate(stmt.initializer);
         }
+
+        for (String keyword : builtInFunc){
+            if (stmt.name.lexeme.equals(keyword)){
+                throw new RuntimeError(stmt.name, "Attempt to overload the built-in function");
+            }
+        }
+
         environment.define(stmt.name.lexeme, value);
         return null;
     }
@@ -488,6 +497,15 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 return (double) left * (double) right;
         }
 
+        return null;
+    }
+
+    @Override
+    public Object visitTernaryExpr(Expr.Ternary expr){
+        if (isTruthy(evaluate(expr.condition))) {
+            execute(expr.trueCase);
+        } else
+            execute(expr.falseCase);
         return null;
     }
 
