@@ -18,7 +18,7 @@ Jlox was developed as a hands-on project to deepen comprehension of interpreter 
 
 ## Getting Started
 
-To test any of the duck scripts follow these steps.
+To test any of the jlox scripts follow these steps.
 
 ```
 $ cd Jlox--tree-walk_Interpreter
